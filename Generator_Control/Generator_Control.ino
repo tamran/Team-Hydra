@@ -1,10 +1,11 @@
  #include <Wire.h>
  #include <Adafruit_PWMServoDriver.h>
+ 
  Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
-
- // GLOBAL VARIABLES SETTING THE PINS FOR THE SERVOS AND THE MOTOR/GENERATOR, AND THEIR MIN/MAX POSITIONS/VALUES 
+ 
  #define SPARK_IO   0
-	
+ 
+  
  #define CHOKE_IO   1
  #define CHOKE_MIN  150
  #define CHOKE_MAX  350
@@ -12,25 +13,17 @@
  #define THRTL_IO   2
  #define THRTL_MIN  385
  #define THRTL_MAX  540
-
- /*
+ 
  #define GENERATOR_IO   3
  #define GENERATOR_MIN  150
  #define GENERATOR_MAX  255
- */
-
- // will be using servo pin to control the ESC which in turn controls the motor
- #define GENERATOR_IO   9
- #define GENERATOR_MIN  0
- #define GENERATOR_MAX  4095
-
-
  
- /* used to transform a fractional value from 0 and 1 to a viable pulse length for PWM signal
-  * 0 = minimal viable duration, 1 = maximal viable duration 
-  * Note: min and max duration different for each servos, and are defined as global variables
+ /*
+  * Hardcoded correlation between servo number constants, minimum constants,
+  * and maximum constants used to transform a float between 0 and 1 to an 
+  * actual output value.
   */
- uint16_t convertToPWM(uint8_t servonum, double val) {
+ uint16_t valueTransform(uint8_t servonum, float pos) {
    uint16_t mMin;
    uint16_t mMax;
    switch (servonum) {
@@ -51,44 +44,33 @@
          return 0;
    }
  
-   return (val*(mMax-mMin))+mMin;
+   return (pos*(mMax-mMin))+mMin;
  }
-
  
- /* Sends chosen servo/generator a PWM signal
-  * Inputs:
-  *     servonum = which servo pin
-  *     pos = position/throttle value; must be between 0 and 1 where 0 = minimum position/throttle, 1 = maximum position/throttle
+ /*
+  * Input a servo number and a position value. The position value must be between
+  * 0 and 1. 0 indicates the minimum viable position, 1 indicates maximum viable
+  * position.
   */
  void setValue(uint8_t servonum, float pos) {
    if(pos < 0) { pos = 0; }
    if(pos > 1) { pos = 1; }
-   uint16_t pulselen = convertToPWM(servonum, pos);
-   if(pulselen == 0 ) { return; }
-   else{
-      pwm.setPWM(servonum,0,pulselen);
-   }
-   /*
+   uint16_t pulselen = valueTransform(servonum, pos);
+   if(pulselen == 0) { return; }
    switch (servonum) {
        case THRTL_IO:
         // Serial.println("Setting Throttle: "+(pos*100));
-
-        // MISSING COMMAND TO SEND PWM SIGNAL TO THE THROTTLE SERVO??? 
-        //pwm.setPWM(servonum, 0, pulselen);
-        //breaks;s
-        
        case CHOKE_IO:
         // Serial.println("Setting Choke Air Intake: "+(pos*100));
          pwm.setPWM(servonum, 0, pulselen);
          break;
        case GENERATOR_IO:
         // Serial.println("Setting Generator Speed: "+(pos*100));
-         pwm.setPWM(servonum, 0, pulselen);
+         analogWrite(servonum, pulselen);
          break;
        default:
          return ;
-   }
-   */
+ }
  }
  
  void setDigitalLow(uint8_t servonum) {
@@ -98,7 +80,6 @@
  void setDigitalHigh(uint8_t servonum) {
    pwm.setPWM(servonum, 0, 4095);
  }
-
  
  /*
   * Function for testing the range of a servo. It will go from the "from" position
@@ -122,10 +103,9 @@
    pwm.begin();
    pwm.setPWMFreq(60);
  
-   /*pinMode(GENERATOR_IO, OUTPUT);
+   //Set up generator and ignition pin
+   pinMode(GENERATOR_IO, OUTPUT);
    analogWrite(GENERATOR_IO, GENERATOR_MIN);
-   */
-   // setup ignition
    setDigitalLow(SPARK_IO);
  
    while (!Serial) {
@@ -160,7 +140,7 @@
          setValue(THRTL_IO, 0.4);
          setValue(CHOKE_IO, 0.0);
          
-         setValue(GENERATOR_IO, GENERATOR_MAX); //Must send max to ready motor from stop.
+         analogWrite(GENERATOR_IO, GENERATOR_MAX); //Must send max to ready motor from stop.
          delay(1500);
          setValue(GENERATOR_IO, 0.4);
          break;
