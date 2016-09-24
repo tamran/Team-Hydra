@@ -66,7 +66,7 @@
    uint16_t pulselen = convertToPWM(servonum, pos);
    if(pulselen == 0 ) { return; }
    else{
-      pwm.setPWM(servonum,0,pulselen)
+      pwm.setPWM(servonum,0,pulselen);
    }
    /*
    switch (servonum) {
@@ -125,8 +125,6 @@
    /*pinMode(GENERATOR_IO, OUTPUT);
    analogWrite(GENERATOR_IO, GENERATOR_MIN);
    */
-   pwm.setPWM(
-
    // setup ignition
    setDigitalLow(SPARK_IO);
  
