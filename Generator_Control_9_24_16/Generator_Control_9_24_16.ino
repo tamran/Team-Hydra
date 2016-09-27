@@ -23,8 +23,6 @@
  #define GENERATOR_IO   9
  #define GENERATOR_MIN  0
  #define GENERATOR_MAX  4095
-
-
  
  /* used to transform a fractional value from 0 and 1 to a viable pulse length for PWM signal
   * 0 = minimal viable duration, 1 = maximal viable duration 
@@ -65,17 +63,13 @@
    if(pos > 1) { pos = 1; }
    uint16_t pulselen = convertToPWM(servonum, pos);
    if(pulselen == 0 ) { return; }
-   else{
-      pwm.setPWM(servonum,0,pulselen);
-   }
-   /*
    switch (servonum) {
        case THRTL_IO:
         // Serial.println("Setting Throttle: "+(pos*100));
 
         // MISSING COMMAND TO SEND PWM SIGNAL TO THE THROTTLE SERVO??? 
         //pwm.setPWM(servonum, 0, pulselen);
-        //breaks;s
+        //breaks;
         
        case CHOKE_IO:
         // Serial.println("Setting Choke Air Intake: "+(pos*100));
@@ -88,7 +82,7 @@
        default:
          return ;
    }
-   */
+   
  }
  
  void setDigitalLow(uint8_t servonum) {
@@ -125,7 +119,8 @@
    /*pinMode(GENERATOR_IO, OUTPUT);
    analogWrite(GENERATOR_IO, GENERATOR_MIN);
    */
-   // setup ignition
+   // setup generator and ignition
+   setDigitalLow(GENERATOR_IO);
    setDigitalLow(SPARK_IO);
  
    while (!Serial) {
