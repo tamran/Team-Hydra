@@ -22,8 +22,8 @@
  // will be using servo pin to control the ESC which in turn controls the motor
  // 
  #define GENERATOR_IO   9
- #define double GENERATOR_MIN  245.69
- #define double GENERATOR_MAX  491.39
+ #define GENERATOR_MIN  245.69
+ #define GENERATOR_MAX  491.39
  
  /* used to transform a fractional value from 0 and 1 to a viable pulse length for PWM signal
   * 0 = minimal viable duration, 1 = maximal viable duration 
@@ -78,7 +78,7 @@
          break;
        case GENERATOR_IO:
         // Serial.println("Setting Generator Speed: "+(pos*100));
-         pwm.setPWM(servonum, 0, pulselen);
+         pwm.setPWM(servonum, 0, pos);
          break;
        default:
          return ;
