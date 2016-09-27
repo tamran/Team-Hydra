@@ -20,9 +20,10 @@
  */
 
  // will be using servo pin to control the ESC which in turn controls the motor
+ // 
  #define GENERATOR_IO   9
- #define GENERATOR_MIN  0
- #define GENERATOR_MAX  4095
+ #define double GENERATOR_MIN  245.69
+ #define double GENERATOR_MAX  491.39
  
  /* used to transform a fractional value from 0 and 1 to a viable pulse length for PWM signal
   * 0 = minimal viable duration, 1 = maximal viable duration 
