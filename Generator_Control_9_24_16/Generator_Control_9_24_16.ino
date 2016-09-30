@@ -134,14 +134,14 @@
    while (data == 0) {
      data = Serial.parseInt();
    }
-   //Serial.println("System Ready");
+   Serial.println("System Ready");
  }
  
  void loop() {
      if(data != 0) {
        Serial.println();
        data = 0;
-       //Serial.println("Waiting for command. 1/2/3 - Start Motor, 4/5 - Idle Motor, 6 - Stop Motor (Choke)");
+       Serial.println("Waiting for command. 1/2/3 - Start Motor, 4/5 - Idle Motor, 6 - Stop Motor (Choke)");
        Serial.println();
      }
  
@@ -161,13 +161,13 @@
          setValue(GENERATOR_IO, 0.4);
          break;
        case 2:
-         //Serial.println("Moving to Start Sequence Phase 2...");
+         Serial.println("Moving to Start Sequence Phase 2...");
          setValue(GENERATOR_IO, 0.4);
          setValue(THRTL_IO, 0.4);
          setValue(CHOKE_IO, 0.5);
          break;
        case 3:
-         //Serial.println("Moving to Start Sequence Phase 3...");
+         Serial.println("Moving to Start Sequence Phase 3...");
          setValue(GENERATOR_IO, 0.4);
          setValue(THRTL_IO, 0.65);
          setValue(CHOKE_IO, 0.5);
