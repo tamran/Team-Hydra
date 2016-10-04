@@ -1,31 +1,27 @@
 #include <Wire.h>
-#include <Adafruit_PWMServoDriver.h>
-Adafruit_PWMServoDriver pwm = Adafruit_PWMServoDriver();
+#include <Servo.h>
+#include <string.h>
 
 //SET PINS
 #define SPARK_PIN  0
 #define CHOKE_PIN  1
-#define THRTL_PIN  2
-#define ESC_PIN  9 
+#define THROTTLE_PIN  2
+#define ESC_PIN  3 
+Servo sparkServo;
+Servo chokeServo;
+Servo throttleServo;
+Servo escServo;
 
-// DEFINE PWM FREQ IN Hz
-const int FREQ = 250;
-
-// DEFINE NUMBER OF TICKS PER PULSE
-const int NUM_TICKS = 4096;
-
-// CALCULATE TICK LENGTH IN MILLISECONDS (ms)
-const double TICK_LENGTH = pow(10,3)/(FREQ * NUM_TICKS); // gives ms/tick
 
 // DEFINE MIN/MAX PWM LENGTHS IN MILLISECONDS (ms)
-const double SPARK_MIN_PL = 0;
-const double SPARK_MAX_PL = (1/FREQ);
+const double SPARK_MIN_PL = 1;
+const double SPARK_MAX_PL = 2;
 
 const double CHOKE_MIN_PL = 0.610;
 const double CHOKE_MAX_PL = 1.424;
  
-const double THRTL_MIN_PL =  1.566;
-const double THRTL_MAX_PL = 2.197; 
+const double THROTTLE_MIN_PL =  1.566;
+const double THROTTLE_MAX_PL = 2.197; 
 
 const double ESC_MIN_PL = 1;
 const double ESC_MAX_PL = 2;
@@ -34,23 +30,66 @@ const double ESC_MAX_PL = 2;
 // DEFINE MIN/MAX THROTTLE DECIMAL PERCENTAGES TO INPUT
 // in general:
     // 0 = 0%  no movement
-    // 1.0 = 100% = full speed forwards
-    // -1.0 = -100% = full speed backwards -- SPARK, THROTTLE, AND CHOKE SERVOS DON'T MOVE IN REVERSE DIRECTION!!!
+    // 100 = 100% = full speed forwards
+    // -100 = -100% = full speed backwards -- SPARK, THROTTLE, AND CHOKE SERVOS DON'T MOVE IN REVERSE DIRECTION!!!
 const double SPARK_MIN = 0;
-const double SPARK_MAX = 1;
+const double SPARK_MAX = 100;
 
 const double CHOKE_MIN = 0;
-const double CHOKE_MAX = 1;
+const double CHOKE_MAX = 100;
 
-const double THRTL_MIN = 0;
-const double THRTL_MAX = 1;
+const double THROTTLE_MIN = 0;
+const double THROTTLE_MAX = 100;
 
-const double ESC_MIN = -1;
-const double ESC_MAX = 1;
+const double ESC_MIN = -100;
+const double ESC_MAX = 100;
 
 
 // DEFINE SERIAL INPUT
+int percentThrottle = 0;
+double pulseLength = 1500;
+char serialString[100];
 int MODE = 0;
+
+
+// initializes ESC PWM
+void initializeESC(){
+  Serial.println("Initializing...");
+  Serial.println("Starting Phase 1 - sending 1.0 ms pulse");
+  escServo.writeMicroseconds(1000);
+  delay(5000);
+  Serial.println("Starting Phase 2 - sending 1.65 ms pulse");
+  escServo.writeMicroseconds(1650);
+  delay(5000);
+  Serial.println("Starting Phase 3 - sending 1.8 ms pulse");
+  escServo.writeMicroseconds(1800);
+  delay(10000);
+  Serial.println("Starting Final Phase 4 - sending 2.0 ms pulse");
+  escServo.writeMicroseconds(2000);
+  delay(5000);
+  // stop after initialization
+  Serial.println("Motor Stopped, ready to go!");
+  escServo.writeMicroseconds(1500);
+
+}
+
+
+void setup() {
+  // setup esc servo
+  sparkServo.attach(SPARK_PIN);
+  chokeServo.attach(CHOKE_PIN);
+  throttleServo.attach(THROTTLE_PIN);
+  escServo.attach(ESC_PIN);
+  
+  Serial.begin(9600);
+
+
+  initializeESC();
+  
+  
+  yield();
+}
+
 
 
 // maps input value to output value for given input range and output range
@@ -62,148 +101,138 @@ double mapVal(double val, double fromMin, double fromMax, double toMin, double t
   return out; 
 }
 
+
 // sends pwm pulse based on decimal percentage of throttle 
 void sendPulse(int servoNum, double percentThrottle){
   double minPL,maxPL, minThrottle, maxThrottle;
+  Servo myServo;
   if (servoNum == SPARK_PIN){
     minPL = SPARK_MIN_PL;
     maxPL = SPARK_MAX_PL;
     minThrottle = SPARK_MIN;
     maxThrottle = SPARK_MAX;
+    myServo = sparkServo;
   }
   else if (servoNum == CHOKE_PIN){
     minPL = CHOKE_MIN_PL;
     maxPL = CHOKE_MAX_PL;
     minThrottle = CHOKE_MIN;
     maxThrottle = CHOKE_MAX;
+    myServo = chokeServo;
   }
-  else if (servoNum == THRTL_PIN){
-    minPL = THRTL_MIN_PL;
-    maxPL = THRTL_MAX_PL;
-    minThrottle = THRTL_MIN;
-    maxThrottle = THRTL_MAX;
+  else if (servoNum == THROTTLE_PIN){
+    minPL = THROTTLE_MIN_PL;
+    maxPL = THROTTLE_MAX_PL;
+    minThrottle = THROTTLE_MIN;
+    maxThrottle = THROTTLE_MAX;
+    myServo = throttleServo;
   }
   else if (servoNum == ESC_PIN){
     minPL = ESC_MIN_PL;
     maxPL = ESC_MAX_PL;    
     minThrottle = ESC_MIN;
     maxThrottle = ESC_MAX;
-  }
-  else{     // default 
-    minPL = 1;
-    maxPL = 2;
-    minThrottle = 0;
-    maxThrottle = 1;
+    myServo = escServo;
   }
 
-  // calculate min/max ticks
-  int minTick = round(minPL/TICK_LENGTH);
-  int maxTick = round(maxPL/TICK_LENGTH);
-  if (maxTick >= NUM_TICKS){          // tick index can't exceed 4095
-    maxTick = NUM_TICKS-1;
-  }
-
-  // map pulse tick to value in between min/max ticks
-  int pulseTick = mapVal(percentThrottle,minThrottle,maxThrottle,minTick,maxTick);
-  if (pulseTick >= NUM_TICKS){          // tick index can't exceed 4095
-    pulseTick = NUM_TICKS-1;
-  }
-
-  pwm.setPWM(servoNum,0,pulseTick);
+  double pulseLength = mapVal(percentThrottle,minThrottle,maxThrottle,minPL*pow(10,3),maxPL*pow(10,3));
+  myServo.writeMicroseconds(pulseLength);
 
 }
 
 
-// send 0 PWM signal
-void setDigitalLow(uint8_t servoNum) {
-  pwm.setPWM(servoNum,0,0);
+// send 0 PWM signal - 1.5 ms
+void setDigitalLow(int servoNum) {
+  Servo myServo;
+  if (servoNum == SPARK_PIN){
+    myServo = sparkServo;
+  }
+  else if (servoNum == CHOKE_PIN){
+    myServo = chokeServo;
+  }
+  else if (servoNum == THROTTLE_PIN){
+    myServo = throttleServo;
+  }
+  else if (servoNum == ESC_PIN){
+    myServo = escServo;
+  }
+
+  myServo.writeMicroseconds(1500);
+  
 }
 
-// send MAX PWM signal
-void setDigitalHigh(uint8_t servoNum) {
-  pwm.setPWM(servoNum,0,NUM_TICKS-1);
+// send MAX PWM signal - 2 ms
+void setDigitalHigh(int servoNum) {
+  Servo myServo;
+  if (servoNum == SPARK_PIN){
+    myServo = sparkServo;
+  }
+  else if (servoNum == CHOKE_PIN){
+    myServo = chokeServo;
+  }
+  else if (servoNum == THROTTLE_PIN){
+    myServo = throttleServo;
+  }
+  else if (servoNum == ESC_PIN){
+    myServo = escServo;
+  }
+  
+  myServo.writeMicroseconds(2000);
 }
 
 
 // send servo to min position
 void setServoLow(int servoNum){
   double minPL;
+  Servo myServo;
   if (servoNum == SPARK_PIN){
     minPL = SPARK_MIN_PL;
+    myServo = sparkServo;
   }
   else if (servoNum == CHOKE_PIN){
     minPL = CHOKE_MIN_PL;
+    myServo = chokeServo;
   }
-  else if (servoNum == THRTL_PIN){
-    minPL = THRTL_MIN_PL;
+  else if (servoNum == THROTTLE_PIN){
+    minPL = THROTTLE_MIN_PL;
+    myServo = throttleServo;
   }
   else if (servoNum == ESC_PIN){
     minPL = ESC_MIN_PL;
-  }
-  else{     // default 
-    minPL = 1;
+    myServo = escServo;
   }
 
-  // calculate min tick
-  int minTick = round(minPL/TICK_LENGTH);
- 
-  pwm.setPWM(servoNum,0,minTick);
+  myServo.writeMicroseconds(minPL*pow(10,3));
   
 }
 
 // send servo to max position
 void setServoHigh(int servoNum){
   double maxPL;
+  Servo myServo;
   if (servoNum == SPARK_PIN){
     maxPL = SPARK_MAX_PL;
+    myServo = sparkServo;
   }
   else if (servoNum == CHOKE_PIN){
     maxPL = CHOKE_MAX_PL;
+    myServo = chokeServo;
   }
-  else if (servoNum == THRTL_PIN){
-    maxPL = THRTL_MAX_PL;
+  else if (servoNum == THROTTLE_PIN){
+    maxPL = THROTTLE_MAX_PL;
+    myServo = throttleServo;
   }
   else if (servoNum == ESC_PIN){
-    maxPL = ESC_MAX_PL;    
-  }
-  else{     // default 
-    maxPL = 2;
+    maxPL = ESC_MAX_PL;
+    myServo = escServo;
   }
 
-  // calculate max tick
-  int maxTick = round(maxPL/TICK_LENGTH);
-  if (maxTick >= NUM_TICKS){          // tick index can't exceed 4095
-    maxTick = NUM_TICKS-1;
-  }
+  myServo.writeMicroseconds(maxPL*pow(10,3));
   
-  pwm.setPWM(servoNum,0,maxTick);
 }
 
-
- void setup() {
-  // initiate PWM signal
-  pwm.begin();
-  pwm.setPWMFreq(FREQ);
-  
-  
-  Serial.begin(9600);
-  
-  yield();
- 
-  // setup generator and ignition
-  setDigitalLow(ESC_PIN);
-  setDigitalLow(SPARK_PIN);
- 
-  while (!Serial) {
-    ;
-  }
-  
-  Serial.println("All systems go!");
-   
-  
- }
- 
  void loop() {
+  
      if(MODE == 0) {
         Serial.println("Waiting for command: 1/2/3 - Start Motor, 4/5 - Idle Motor, 6 - Stop Motor (Choke)");
      }
@@ -215,7 +244,7 @@ void setServoHigh(int servoNum){
          Serial.println("Initiating Ignition Sequence");
          
          setServoHigh(SPARK_PIN);
-         sendPulse(THRTL_PIN, 0.4);
+         sendPulse(THROTTLE_PIN, 0.4);
          setServoLow(CHOKE_PIN);
          
          setServoHigh(ESC_PIN);
@@ -229,7 +258,7 @@ void setServoHigh(int servoNum){
          Serial.println("Moving to Start Sequence Phase 2...");
          sendPulse(ESC_PIN, 0.4);
          
-         sendPulse(THRTL_PIN, 0.4);
+         sendPulse(THROTTLE_PIN, 0.4);
          sendPulse(CHOKE_PIN, 0.5);
          
          break;
@@ -237,21 +266,21 @@ void setServoHigh(int servoNum){
        case 3:
          Serial.println("Moving to Start Sequence Phase 3...");
          sendPulse(ESC_PIN, 0.4);
-         sendPulse(THRTL_PIN, 0.65);
+         sendPulse(THROTTLE_PIN, 0.65);
          sendPulse(CHOKE_PIN, 0.5);
          break;
          
        case 4:
          Serial.println("Initiating Idle Sequence...");
          sendPulse(ESC_PIN, 0.2);
-         sendPulse(THRTL_PIN, 0.65);
+         sendPulse(THROTTLE_PIN, 0.65);
          sendPulse(CHOKE_PIN, 0.5);
          break;
          
        case 5:
          Serial.println("Moving to Idle Sequence Phase 2..");
          sendPulse(ESC_PIN, 0.0);
-         sendPulse(THRTL_PIN, 0.65);
+         sendPulse(THROTTLE_PIN, 0.65);
          sendPulse(CHOKE_PIN, 0.5);
          break;
          
@@ -261,7 +290,7 @@ void setServoHigh(int servoNum){
          setServoLow(SPARK_PIN);
  
          sendPulse(ESC_PIN, 0.0);
-         sendPulse(THRTL_PIN, 0.0);
+         sendPulse(THROTTLE_PIN, 0.0);
          sendPulse(CHOKE_PIN, 1.0);
          break;
          

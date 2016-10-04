@@ -3,20 +3,21 @@
 #include <string.h>
 
 // SET PIN
-#define ESC_PIN 3
-Servo escServo;
+#define SERVO_PIN 1
+Servo myServo;
+
 
 // DEFINE MIN/MAX PULSE LENGTH IN MILLISECONDS (ms)
-const double ESC_MIN_PL = 1;
-const double ESC_MAX_PL = 2;
+const double minPL = 1;
+const double maxPL = 2;
 
 // DEFINE MIN/MAX THROTTLE DECIMAL PERCENTAGES TO INPUT
 // in general:
     // 0 = 0%  no movement
     // 100 = 100% = full speed forwards
     // -100 = -100% = full speed backwards
-const int ESC_MIN = -100;
-const int ESC_MAX = 100;
+const int minThrottle = -100;
+const int maxThrottle = 100;
 
 
 // DEFINE SERIAL INPUT
@@ -25,37 +26,21 @@ double pulseLength = 1500;
 char serialString[100];
 
 
-// initializes ESC PWM
-void initializeESC(){
-  Serial.println("Initializing...");
-  Serial.println("Starting Phase 1 - sending 1.0 ms pulse");
-  escServo.writeMicroseconds(1000);
-  delay(5000);
-  Serial.println("Starting Phase 2 - sending 1.65 ms pulse");
-  escServo.writeMicroseconds(1650);
-  delay(5000);
-  Serial.println("Starting Phase 3 - sending 1.8 ms pulse");
-  escServo.writeMicroseconds(1800);
-  delay(10000);
-  Serial.println("Starting Final Phase 4 - sending 2.0 ms pulse");
-  escServo.writeMicroseconds(2000);
-  delay(5000);
-  // stop after initialization
-  Serial.println("Motor Stopped, ready to go!");
-  escServo.writeMicroseconds(1500);
-
-}
-
-
 void setup() {
   // setup esc servo
-  escServo.attach(ESC_PIN);
+  myServo.attach(SERVO_PIN);
+
+  
+  // sweep over pwm lengths from 1 ms to 2 ms and read the angle of the servo
+  for (int pulseLength = 1000; pulseLength <= 2000; pulseLength++) { 
+    myServo.writeMicroseconds(pulseLength);
+    sprintf(serialString,"pulseLength: %d \t angle: %d", pulseLength, myServo.read());
+
+    delay(15);                                 
+  }
   
   Serial.begin(9600);
 
-
-  initializeESC();
-  
   
   yield();
 }
@@ -73,13 +58,13 @@ int mapVal(int val, int fromMin, int fromMax, int toMin, int toMax){
 
 // maps throttle percentage to PWM pulse length in μs (converts ms ->μs!!!)
 int convertToPL(int percentThrottle){
-  int pulseLength = mapVal(percentThrottle,ESC_MIN,ESC_MAX,ESC_MIN_PL*pow(10,3),ESC_MAX_PL*pow(10,3));
+  int pulseLength = mapVal(percentThrottle,minThrottle,maxThrottle,minPL*pow(10,3),maxPL*pow(10,3));
   return pulseLength;
 }
 
-void sendMotorPulse(int percentThrottle){
+void sendPulse(int percentThrottle){
   double pulseLength = convertToPL(percentThrottle);
-  escServo.writeMicroseconds(pulseLength);
+  myServo.writeMicroseconds(pulseLength);
 }
 
 void loop() {
@@ -88,11 +73,11 @@ void loop() {
       pulseLength = convertToPL(percentThrottle);
   }
 
-  sprintf(serialString,"percent throttle: %d \t pulse length: %d", percentThrottle, (int)pulseLength);
+  sprintf(serialString,"pulseLength: %d \t angle: %d", pulseLength, myServo.read());
   Serial.println(serialString);
 
   // convert throttle decimal percentage into pulse length duration and send pulse
-  sendMotorPulse(percentThrottle);
+  sendPulse(percentThrottle);
 
   delay(500);
 
