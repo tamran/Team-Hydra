@@ -20,6 +20,8 @@ const int maxThrottle = 100;
 
 
 // DEFINE SERIAL INPUT
+int percentThrottle = 0;
+double pulseLength = 1500;
 char serialString[100];
 
 
@@ -27,10 +29,11 @@ void setup() {
   // setup esc servo
   myServo.attach(SERVO_PIN);
 
+  Serial.println("Initializing...");
   // sweep over pwm lengths from 1 ms to 2 ms and read the angle of the servo
   for (int pulseLength = 1000; pulseLength <= 2000; pulseLength++) { 
     myServo.writeMicroseconds(pulseLength);     
-    delay(15);                                 
+    delay(1500);                                 
   }
   
   Serial.begin(9600);

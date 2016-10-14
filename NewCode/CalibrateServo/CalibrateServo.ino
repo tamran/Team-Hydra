@@ -3,12 +3,12 @@
 #include <string.h>
 
 // SET PIN
-#define SERVO_PIN 1
+#define SERVO_PIN 6
 Servo myServo;
 
 
 // DEFINE MIN/MAX PULSE LENGTH IN MILLISECONDS (ms)
-const double minPL = 1;
+const double minPL = 0;
 const double maxPL = 2;
 
 // DEFINE MIN/MAX THROTTLE DECIMAL PERCENTAGES TO INPUT
@@ -25,22 +25,26 @@ int percentThrottle = 0;
 double pulseLength = 1500;
 char serialString[100];
 
+// sweep pulse lengths
+void sweep(){
+   Serial.println("Initializing...about to sweep");
+  // sweep over pwm lengths from 1 ms to 2 ms and read the angle of the servo
+  for (int i = 1000; i <= 2000; i++) { 
+    myServo.writeMicroseconds(i);
+    sprintf(serialString,"sweeping...pulseLength: %d \t angle: %d", i, myServo.read());
+    Serial.println(serialString);
+  }
+
+}
+
+
 
 void setup() {
   // setup esc servo
   myServo.attach(SERVO_PIN);
-
-  
-  // sweep over pwm lengths from 1 ms to 2 ms and read the angle of the servo
-  for (int pulseLength = 1000; pulseLength <= 2000; pulseLength++) { 
-    myServo.writeMicroseconds(pulseLength);
-    sprintf(serialString,"pulseLength: %d \t angle: %d", pulseLength, myServo.read());
-
-    delay(15);                                 
-  }
-  
   Serial.begin(9600);
 
+  pulseLength = 1500;
   
   yield();
 }
@@ -72,8 +76,7 @@ void loop() {
       percentThrottle = Serial.parseInt();
       pulseLength = convertToPL(percentThrottle);
   }
-
-  sprintf(serialString,"pulseLength: %d \t angle: %d", pulseLength, myServo.read());
+  sprintf(serialString,"pulseLength: %d \t angle: %d", (int) pulseLength, myServo.read());
   Serial.println(serialString);
 
   // convert throttle decimal percentage into pulse length duration and send pulse

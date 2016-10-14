@@ -3,9 +3,8 @@
 #include <string.h>
 
 //SET PINS
-#define SPARK_PIN  0
-#define CHOKE_PIN  1
-#define THROTTLE_PIN  2
+#define CHOKE_PIN  6
+#define THROTTLE_PIN  5
 #define ESC_PIN  3 
 Servo sparkServo;
 Servo chokeServo;
@@ -14,14 +13,11 @@ Servo escServo;
 
 
 // DEFINE MIN/MAX PWM LENGTHS IN MILLISECONDS (ms)
-const double SPARK_MIN_PL = 1;
-const double SPARK_MAX_PL = 2;
-
-const double CHOKE_MIN_PL = 0.610;
-const double CHOKE_MAX_PL = 1.424;
+const double CHOKE_CLOSED_PL = 0.650; // closed choke, min air
+const double CHOKE_OPEN_PL = 1.200; // open choke, max air
  
-const double THROTTLE_MIN_PL =  1.566;
-const double THROTTLE_MAX_PL = 2.197; 
+const double THROTTLE_OPEN_PL = 1.250; // open/full throttle, max gas
+const double THROTTLE_CLOSED_PL = 1.925; // closed/min throttle, min gas
 
 const double ESC_MIN_PL = 1;
 const double ESC_MAX_PL = 2;
@@ -32,14 +28,12 @@ const double ESC_MAX_PL = 2;
     // 0 = 0%  no movement
     // 100 = 100% = full speed forwards
     // -100 = -100% = full speed backwards -- SPARK, THROTTLE, AND CHOKE SERVOS DON'T MOVE IN REVERSE DIRECTION!!!
-const double SPARK_MIN = 0;
-const double SPARK_MAX = 100;
 
 const double CHOKE_MIN = 0;
 const double CHOKE_MAX = 100;
 
-const double THROTTLE_MIN = 0;
-const double THROTTLE_MAX = 100;
+const double THROTTLE_MIN = 100;
+const double THROTTLE_MAX = 0;
 
 const double ESC_MIN = -100;
 const double ESC_MAX = 100;
@@ -68,24 +62,38 @@ void initializeESC(){
   escServo.writeMicroseconds(2000);
   delay(5000);
   // stop after initialization
-  Serial.println("Motor Stopped, ready to go!");
+  Serial.println("Done Initializing!");
   escServo.writeMicroseconds(1500);
 
 }
 
 
 void setup() {
-  // setup esc servo
-  sparkServo.attach(SPARK_PIN);
+  
+  // setup servos
   chokeServo.attach(CHOKE_PIN);
   throttleServo.attach(THROTTLE_PIN);
   escServo.attach(ESC_PIN);
   
   Serial.begin(9600);
 
+  Serial.println("Initiating Ignition Sequence");
+  // CLOSED THROTTLE, CLOSED CHOKE
+  setServoLow(THROTTLE_PIN);
+  setServoLow(CHOKE_PIN);
+              
 
   initializeESC();
-  
+
+  sendPulse(THROTTLE_PIN,100);
+  setServoHigh(ESC_PIN);
+  Serial.println("Motor Idling at Max Speed");
+  delay(5000);
+
+
+  sendPulse(THROTTLE_PIN,0);
+  setServoLow(ESC_PIN);
+  Serial.println("Motor Stopped");
   
   yield();
 }
@@ -102,27 +110,20 @@ double mapVal(double val, double fromMin, double fromMax, double toMin, double t
 }
 
 
-// sends pwm pulse based on decimal percentage of throttle 
+// sends pwm pulse based on decimal percentage of throttle/amount of openness
 void sendPulse(int servoNum, double percentThrottle){
   double minPL,maxPL, minThrottle, maxThrottle;
   Servo myServo;
-  if (servoNum == SPARK_PIN){
-    minPL = SPARK_MIN_PL;
-    maxPL = SPARK_MAX_PL;
-    minThrottle = SPARK_MIN;
-    maxThrottle = SPARK_MAX;
-    myServo = sparkServo;
-  }
-  else if (servoNum == CHOKE_PIN){
-    minPL = CHOKE_MIN_PL;
-    maxPL = CHOKE_MAX_PL;
+  if (servoNum == CHOKE_PIN){
+    minPL = CHOKE_CLOSED_PL;
+    maxPL = CHOKE_OPEN_PL;
     minThrottle = CHOKE_MIN;
     maxThrottle = CHOKE_MAX;
     myServo = chokeServo;
   }
   else if (servoNum == THROTTLE_PIN){
-    minPL = THROTTLE_MIN_PL;
-    maxPL = THROTTLE_MAX_PL;
+    minPL = THROTTLE_OPEN_PL;
+    maxPL = THROTTLE_CLOSED_PL;
     minThrottle = THROTTLE_MIN;
     maxThrottle = THROTTLE_MAX;
     myServo = throttleServo;
@@ -140,99 +141,51 @@ void sendPulse(int servoNum, double percentThrottle){
 
 }
 
-
-// send 0 PWM signal - 1.5 ms
-void setDigitalLow(int servoNum) {
-  Servo myServo;
-  if (servoNum == SPARK_PIN){
-    myServo = sparkServo;
-  }
-  else if (servoNum == CHOKE_PIN){
-    myServo = chokeServo;
-  }
-  else if (servoNum == THROTTLE_PIN){
-    myServo = throttleServo;
-  }
-  else if (servoNum == ESC_PIN){
-    myServo = escServo;
-  }
-
-  myServo.writeMicroseconds(1500);
-  
-}
-
-// send MAX PWM signal - 2 ms
-void setDigitalHigh(int servoNum) {
-  Servo myServo;
-  if (servoNum == SPARK_PIN){
-    myServo = sparkServo;
-  }
-  else if (servoNum == CHOKE_PIN){
-    myServo = chokeServo;
-  }
-  else if (servoNum == THROTTLE_PIN){
-    myServo = throttleServo;
-  }
-  else if (servoNum == ESC_PIN){
-    myServo = escServo;
-  }
-  
-  myServo.writeMicroseconds(2000);
-}
-
-
-// send servo to min position
+// send servo to min position/closed configuration
 void setServoLow(int servoNum){
-  double minPL;
+  double closedPL;
   Servo myServo;
-  if (servoNum == SPARK_PIN){
-    minPL = SPARK_MIN_PL;
-    myServo = sparkServo;
-  }
-  else if (servoNum == CHOKE_PIN){
-    minPL = CHOKE_MIN_PL;
+ if (servoNum == CHOKE_PIN){
+    closedPL = CHOKE_CLOSED_PL;
     myServo = chokeServo;
   }
   else if (servoNum == THROTTLE_PIN){
-    minPL = THROTTLE_MIN_PL;
+    closedPL = THROTTLE_CLOSED_PL;
     myServo = throttleServo;
   }
   else if (servoNum == ESC_PIN){
-    minPL = ESC_MIN_PL;
+    closedPL = ESC_MIN_PL;
     myServo = escServo;
   }
 
-  myServo.writeMicroseconds(minPL*pow(10,3));
+  myServo.writeMicroseconds(closedPL*pow(10,3));
   
 }
 
-// send servo to max position
+
+// send servo to max/open position
 void setServoHigh(int servoNum){
-  double maxPL;
+  double openPL;
   Servo myServo;
-  if (servoNum == SPARK_PIN){
-    maxPL = SPARK_MAX_PL;
-    myServo = sparkServo;
-  }
-  else if (servoNum == CHOKE_PIN){
-    maxPL = CHOKE_MAX_PL;
+ if (servoNum == CHOKE_PIN){
+    openPL = CHOKE_OPEN_PL;
     myServo = chokeServo;
   }
   else if (servoNum == THROTTLE_PIN){
-    maxPL = THROTTLE_MAX_PL;
+    openPL = THROTTLE_OPEN_PL;
     myServo = throttleServo;
   }
   else if (servoNum == ESC_PIN){
-    maxPL = ESC_MAX_PL;
+    openPL = ESC_MAX_PL;
     myServo = escServo;
   }
 
-  myServo.writeMicroseconds(maxPL*pow(10,3));
+  myServo.writeMicroseconds(openPL*pow(10,3));
   
 }
 
  void loop() {
-  
+    /*
      if(MODE == 0) {
         Serial.println("Waiting for command: 1/2/3 - Start Motor, 4/5 - Idle Motor, 6 - Stop Motor (Choke)");
      }
@@ -242,9 +195,9 @@ void setServoHigh(int servoNum){
      switch (MODE) {
        case 1:
          Serial.println("Initiating Ignition Sequence");
-         
+         // CLOSED THROTTLE, CLOSED CHOKE
          setServoHigh(SPARK_PIN);
-         sendPulse(THROTTLE_PIN, 0.4);
+         setServoLow(THROTTLE_PIN, 0.4);
          setServoLow(CHOKE_PIN);
          
          setServoHigh(ESC_PIN);
@@ -253,7 +206,7 @@ void setServoHigh(int servoNum){
          
          sendPulse(ESC_PIN, 0.4);
          break;
-         
+      
        case 2:
          Serial.println("Moving to Start Sequence Phase 2...");
          sendPulse(ESC_PIN, 0.4);
@@ -293,8 +246,12 @@ void setServoHigh(int servoNum){
          sendPulse(THROTTLE_PIN, 0.0);
          sendPulse(CHOKE_PIN, 1.0);
          break;
+      
          
        default:
          break;
+
+       
      }
+     */
  }
