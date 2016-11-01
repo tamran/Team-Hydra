@@ -59,6 +59,7 @@ void initializeESC(){
   escServo.writeMicroseconds(1800);
   delay(10000);
   Serial.println("Starting Final Phase 4 - sending 2.0 ms pulse");
+  Serial.println("Done Initiating" );
   escServo.writeMicroseconds(2000);
   delay(5000);
   // stop after initialization

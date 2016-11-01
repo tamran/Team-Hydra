@@ -10,7 +10,7 @@
  #define CHOKE_MIN  150
  #define CHOKE_MAX  350
  
- #define THRTL_IO   2
+ #define THRTL_IO   5
  #define THRTL_MIN  385
  #define THRTL_MAX  540
  
