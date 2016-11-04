@@ -151,7 +151,11 @@ void initializeESC(){
   Serial.println("Starting Phase 2 - sending 1.65 ms pulse");
   escServo.writeMicroseconds(1650);
   delay(5000);
+   Serial.println("Starting Phase 3 - sending 1.8 ms pulse");
+  escServo.writeMicroseconds(1700);
+  delay(5000);
   /*
+   * 
   Serial.println("Starting Phase 3 - sending 1.8 ms pulse");
   escServo.writeMicroseconds(1800);
   delay(10000);
