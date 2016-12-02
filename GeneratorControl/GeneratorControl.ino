@@ -1,8 +1,10 @@
 #include <Wire.h>
 #include <Servo.h>
 #include <string.h>
+// #include <LiquidCrystal.h>
 
-//SET PINS
+
+//SET PINS FOR SERVOS AND ESC
 #define CHOKE_PIN  6
 #define THROTTLE_PIN  5
 #define ESC_PIN  3 
@@ -10,6 +12,8 @@ Servo sparkServo;
 Servo chokeServo;
 Servo throttleServo;
 Servo escServo;
+// #define CURR_PIN  8
+
 
 
 // DEFINE MIN/MAX PWM LENGTHS IN MILLISECONDS (ms)
@@ -38,14 +42,30 @@ const double THROTTLE_MAX = 100;
 const double ESC_MIN = -100;
 const double ESC_MAX = 100;
 
+/*// SPECS OF CURRENT SENSOR
+double maxV = 5; // volts
+double minV = -5; // volts
+double maxI = 100; // amps
+double minI = -100; // amps
+*/
 
 // DEFINE SERIAL INPUT
+/*double vReading = 0;
+char currString[100];
+*/
 int percent = 0;
 double pulseLength = 1500;
 char serialString[100];
 int MODE = 0;
 
-
+/*
+// LCD SETUP
+LiquidCrystal lcd(12, 11, 5, 4, 3, 6);
+// Tachometer Setup
+volatile byte revolutions;
+unsigned int rpm;
+unsigned long timeold;
+*/
 
 
 // maps input value to output value for given input range and output range
@@ -151,28 +171,38 @@ void initializeESC(){
   Serial.println("Starting Phase 2 - sending 1.65 ms pulse");
   escServo.writeMicroseconds(1650);
   delay(5000);
-   Serial.println("Starting Phase 3 - sending 1.8 ms pulse");
-  escServo.writeMicroseconds(1800);
-  delay(10000);
-  Serial.println("Starting Final Phase 4 - sending 2.0 ms pulse");
-  escServo.writeMicroseconds(2000);
-  delay(5000);
-  // stop after initialization
-  Serial.println("Done Initializing!");
-  escServo.writeMicroseconds(1500);
-  /*
   Serial.println("Starting Phase 3 - sending 1.8 ms pulse");
+  escServo.writeMicroseconds(1700);
+  delay(10000);
+  /*Serial.println("Starting Phase 3 - sending 1.8 ms pulse");
   escServo.writeMicroseconds(1800);
   delay(10000);
-  Serial.println("Starting Final Phase 4 - sending 2.0 ms pulse");
+  Serial.println("Starting Final Phase 4 - sending 2.0 ms pulse for 10 seconds");
   escServo.writeMicroseconds(2000);
-  delay(5000);
+  delay(10000);
   // stop after initialization
   Serial.println("Done Initializing!");
   escServo.writeMicroseconds(1500);
   */
-
 }
+
+/*// map binary output of current sensor to current value
+double mapCurr(int binValue){
+  double vReading = mapVal(binValue,0,255,minV,maxV);
+  double iReading = mapVal(vReading, minV, maxV, minI, maxI);
+  
+  return iReading;
+}
+*/
+
+ /* 
+ //This function is called whenever a magnet/interrupt is detected by the arduino
+void addRevolution()
+ {
+   revolutions++;
+   Serial.println(revolutions);
+ }
+*/
 
 
 void setup() {
@@ -188,7 +218,18 @@ void setup() {
   // CLOSED THROTTLE, CLOSED CHOKE
   setServoLow(THROTTLE_PIN);
   setServoLow(CHOKE_PIN);
-              
+
+  /*
+   // LCD Setup
+  lcd.begin(20, 4);
+  lcd.print("Time:");
+  // Tachometer Setup
+   Serial.begin(9600);
+   attachInterrupt(0, addRevolution, FALLING);//Initialize the intterrupt pin (Arduino digital pin 2)
+   revolutions = 0;
+   rpm = 0;
+   timeold = 0;
+   */
 
   initializeESC();
 
@@ -198,7 +239,6 @@ void setup() {
   delay(5000);
   */
 
-
   setServoLow(ESC_PIN);
   Serial.println("Motor Stopped");
   
@@ -207,7 +247,54 @@ void setup() {
 
 
 
- void loop() {
+void loop() {
+  /*
+  // read current
+  int binValue = analogRead(CURR_PIN);
+  double iReading = mapCurr(binValue);
+
+  // print current
+  sprintf(currString,"current: %f", iReading);
+  Serial.println(currString);
+
+  delay(500);
+  */
+  
+
+    /*
+    // set the cursor to column 0, line 1
+    // (note: line 1 is the second row, since counting begins with 0):
+    lcd.setCursor(5, 0);
+    // print the number of seconds since reset:
+    lcd.print(millis() / 1000);
+    
+    
+    // Tochometer 
+    lcd.setCursor(10,0);
+    lcd.print("RPM:");
+    if (revolutions >= 20) { 
+       rpm = 60*1000/(millis() - timeold)*revolutions;
+       timeold = millis();
+       revolutions = 0;
+       Serial.println(rpm,DEC);
+       Serial.println(timeold);
+        }
+    lcd.setCursor(14,0);
+    lcd.print(rpm);
+   
+    // Voltmeter
+    lcd.setCursor(0,1);
+    lcd.print("Voltage:");
+    
+    // Ammeter
+    lcd.setCursor(0,2);
+    lcd.print("Current:");
+    
+    // Multiplication Calculation
+    lcd.setCursor(0,3);
+    lcd.print("POOOOWAH:");
+    */
+    
     /*
      if(MODE == 0) {
         Serial.println("Waiting for command: 1/2/3 - Start Motor, 4/5 - Idle Motor, 6 - Stop Motor (Choke)");

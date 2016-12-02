@@ -6,7 +6,7 @@ markerSize = 8;
 legSize = 16;
 lw = 1;
 
-%% data
+%% WITH LIPO CHARGER, NO VOLTAGE DIVIDER, POWERED WITH 3.3 --> signal from about -28 to 28 V
 curr_pos = [0 1 2 3 4 5 5.9]; % in A
 signal_pos = [1.649 1.655 1.662 1.669 1.675 1.683 1.688]; % in V
 curr_neg = [-1 -2 -3 -4 -5]; % in A
@@ -30,7 +30,7 @@ modelSignal = polyval(P,modelCurr);
 
 % slope is the EFFECTIVE resistance of the current sensor
 R = P(1)  
-% the actual resistor should be 100 ?m
+% the actual resistor should be 100 um
 
 plot(modelCurr,modelSignal,'k-');
 
@@ -57,3 +57,47 @@ set(leg,'FontSize',legSize);
 
 hold off;
 
+%% WITH MOTOR, NO VOLTAGE DIVIDER
+% base voltage 1.62 --> half the input power?
+% highest reading was 1.665
+
+%% (12/2/16) WITH LIPO CHARGER, NO VOLTAGE DIVIDER, POWERED BY 3.3 V -- 
+pwrVoltage = 3.27; % V
+curr = [-4 -3 -2 -1 0 1 2 3 4 5]; % in A
+signal = [1.588 1.577 1.582 1.592 1.6 1.616 1.616 1.622 1.629 1.636]; % V
+
+
+% calculate percent error based on my model of voltage division
+expectedZeroSignal = pwrVoltage./2
+zeroIndex = find(curr==0);
+percentError = ((signal(zeroIndex) - expectedZeroSignal)./(signal(zeroIndex))).*100
+
+
+% fit line
+P = polyfit(curr,signal,1);
+modelSignal = polyval(P,modelCurr);
+figure
+plot(curr,signal,'bo','MarkerFaceColor','blue')
+hold on
+plot(modelCurr,modelSignal,'r--');
+set(gca,'FontSize',tickSize)
+grid on
+xlabel('Current (A)','FontSize',axesSize)
+ylabel('Signal (V)','FontSize',axesSize)
+title('Signal vs. Current','FontSize',titleSize)
+hold on
+
+R = P(1);
+zeroSignal = P(2);
+
+totalFitLeg = sprintf('total fit, R_{eff} = %.4g',R);
+
+leg = legend('data points',totalFitLeg, 'Location','northwest');
+set(leg,'FontSize',legSize);
+
+hold off;
+
+
+% compare hypothesis with linear fit
+expectedRange = (expectedZeroSignal - zeroSignal)./R % expected range from fit
+hypotheticalRange =  pwrVoltage.*(polyval(P,1)./1) % expected range from hyptohesis
