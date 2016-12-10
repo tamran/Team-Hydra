@@ -69,15 +69,15 @@ void sendPulse(int percentThrottle){
 
 void loop() {
   if (Serial.available()>0){
-      percentThrottle = Serial.parseFloat();
-      pulseLength = convertToPL(percentThrottle);
+      pulseLength = Serial.parseFloat();
   }
-  sprintf(serialString,"pulseLength: %d \t angle: %d", (int) pulseLength, myServo.read());
+  // print out 1000 * pulse length since serial monitor can't print floats in sprintf
+  sprintf(serialString,"1000 * pulseLength: %d \t angle: %d", (int) (100*pulseLength), myServo.read());
   Serial.println(serialString);
 
   // convert throttle decimal percentage into pulse length duration and send pulse
-  sendPulse(percentThrottle);
-
+  myServo.writeMicroseconds(pulseLength);
+  
   delay(500);
 
 }
