@@ -6,7 +6,7 @@ markerSize = 8;
 legSize = 16;
 lw = 1;
 
-%% WITH LIPO CHARGER, NO VOLTAGE DIVIDER, POWERED WITH 3.3 --> signal from about -28 to 28 V
+%% WITH LIPO CHARGER, NO VOLTAGE DIVIDER, POWERED WITH 3.3 
 curr_pos = [0 1 2 3 4 5 5.9]; % in A
 signal_pos = [1.649 1.655 1.662 1.669 1.675 1.683 1.688]; % in V
 curr_neg = [-1 -2 -3 -4 -5]; % in A
@@ -32,7 +32,7 @@ modelSignal = polyval(P,modelCurr);
 R = P(1)  
 % the actual resistor should be 100 um
 
-plot(modelCurr,modelSignal,'k-');
+plot(modelCurr,modelSignal,'k-','Linewidth',lw);
 
 % linear fit for postive and negative current separately
 P_pos = polyfit(curr_pos, signal_pos,1);
@@ -45,8 +45,8 @@ R_neg = P_neg(1)
 modelCurr_neg = -10:.5:0;
 modelSignal_neg = polyval(P_neg,modelCurr_neg);
 
-plot(modelCurr_pos, modelSignal_pos, 'r-')
-plot(modelCurr_neg, modelSignal_neg, 'b-')
+plot(modelCurr_pos, modelSignal_pos, 'r-','Linewidth',lw)
+plot(modelCurr_neg, modelSignal_neg, 'b-','Linewidth',lw)
 
 totalFitLeg = sprintf('total fit, R_{eff} = %.4g',R);
 posFitLeg = sprintf('positive fit, R_{eff} = %.4g',R_pos);
@@ -56,6 +56,8 @@ leg = legend('data points',totalFitLeg, posFitLeg, negFitLeg, 'Location','northw
 set(leg,'FontSize',legSize);
 
 hold off;
+print('currSensorPlot1','-dpng')
+
 
 %% WITH MOTOR, NO VOLTAGE DIVIDER
 % base voltage 1.62 --> half the input power?
@@ -79,7 +81,7 @@ modelSignal = polyval(P,modelCurr);
 figure
 plot(curr,signal,'bo','MarkerFaceColor','blue')
 hold on
-plot(modelCurr,modelSignal,'r--');
+plot(modelCurr,modelSignal,'r--','Linewidth',lw);
 set(gca,'FontSize',tickSize)
 grid on
 xlabel('Current (A)','FontSize',axesSize)
@@ -96,6 +98,7 @@ leg = legend('data points',totalFitLeg, 'Location','northwest');
 set(leg,'FontSize',legSize);
 
 hold off;
+print('currSensorPlot2','-dpng')
 
 
 % compare hypothesis with linear fit

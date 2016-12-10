@@ -7,10 +7,6 @@
 Servo myServo;
 
 
-// DEFINE MIN/MAX PULSE LENGTH IN MILLISECONDS (ms)
-const double minPL = 0;
-const double maxPL = 2;
-
 // DEFINE MIN/MAX THROTTLE DECIMAL PERCENTAGES TO INPUT
 // in general:
     // 0 = 0%  no movement
@@ -73,7 +69,7 @@ void sendPulse(int percentThrottle){
 
 void loop() {
   if (Serial.available()>0){
-      percentThrottle = Serial.parseInt();
+      percentThrottle = Serial.parseFloat();
       pulseLength = convertToPL(percentThrottle);
   }
   sprintf(serialString,"pulseLength: %d \t angle: %d", (int) pulseLength, myServo.read());
